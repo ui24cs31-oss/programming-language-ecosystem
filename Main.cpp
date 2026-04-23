@@ -5,7 +5,6 @@
 #include <chrono>
 #include <cstdlib>
 #include <algorithm>
-#include <limits>
 
 enum class UserRole { Admin, Developer, RegularUser };
 
@@ -295,16 +294,23 @@ public:
     void recordRating(int langId) { ratedLanguages.push_back(langId); }
 };
 
+struct PendingRequest {
+    std::string type;
+    std::string langName;
+    std::string versionNum;
+    ProgrammingLanguage* targetLang;
+};
+
 int main() {
     Admin admin(1, "Aakash", "1234");
-    Developer dev(2, "dev1", "pass");
+    Developer dev(2, "Aakash", "1234");
     RegularUser activeUser(100, "alice", "pwd123");
 
     ProgrammingLanguage clang("C++", "System programming language");
     Version cpp20("20", 1024.5);
     clang.addVersion(cpp20);
 
-    std::vector<std::string> pendingLanguages;
+    std::vector<PendingRequest> pendingRequests;
     std::vector<ProgrammingLanguage*> ecosystemLanguages;
     ecosystemLanguages.push_back(&clang);
     
@@ -325,12 +331,7 @@ int main() {
         std::cout << "3. Login as Regular User" << std::endl;
         std::cout << "4. Exit" << std::endl;
         std::cout << "Enter choice: ";
-        if (!(std::cin >> choice)) {
-        std::cout << "Invalid input! Only numbers allowed.\n";
-    std::cin.clear(); // reset fail state
-    std::cin.ignore(1000, '\n'); // discard bad input
-    continue; // retry
-}
+        if (!(std::cin >> choice)) break;
 
         if (choice == 1) {
             std::string inputUser, inputPass;
@@ -342,33 +343,47 @@ int main() {
             if (inputUser == admin.getProfile().name && admin.validatePassword(inputPass)) {
                 while (true) {
                     std::cout << "\n--- Admin Menu ---" << std::endl;
-                    std::cout << "1. Perform Default Action\n2. Approve Pending Language\n3. Delete Language\n4. View All Users\n5. Manage Permissions\n6. Check Feedback\n7. Logout\nChoice: ";
+                    std::cout << "1. Perform Default Action\n2. Approve Pending Request\n3. Delete Language\n4. View All Users\n5. Manage Permissions\n6. Check Feedback\n7. Logout\nChoice: ";
                     int sub;
                     if (!(std::cin >> sub)) break;
                     if (sub == 1) admin.performAction();
                     else if (sub == 2) {
-                        if (pendingLanguages.empty()) {
-                            std::cout << "[Admin] No pending languages to approve." << std::endl;
+                        if (pendingRequests.empty()) {
+                            std::cout << "[Admin] No pending requests to approve." << std::endl;
                         } else {
-                            std::string langName = pendingLanguages.front();
-                            pendingLanguages.erase(pendingLanguages.begin());
-                            ProgrammingLanguage* approvedLang = new ProgrammingLanguage(langName, "Approved language");
-                            ecosystemLanguages.push_back(approvedLang);
-                            admin.addLanguage(*approvedLang);
+                            PendingRequest req = pendingRequests.front();
+                            pendingRequests.erase(pendingRequests.begin());
+                            if (req.type == "NEW") {
+                                ProgrammingLanguage* approvedLang = new ProgrammingLanguage(req.langName, "Approved language");
+                                ecosystemLanguages.push_back(approvedLang);
+                                admin.addLanguage(*approvedLang);
+                                std::cout << "[Admin] Successfully approved new language: " << req.langName << std::endl;
+                            } else if (req.type == "UPDATE") {
+                                Version newV(req.versionNum, 1024.0);
+                                req.targetLang->addVersion(newV);
+                                std::cout << "[Admin] Successfully approved update for language: " << req.langName << " to version " << req.versionNum << std::endl;
+                            }
                             dev.incrementContribution();
-                            std::cout << "[Admin] Successfully approved language: " << langName << std::endl;
                         }
                     }
                     else if (sub == 3) {
-                        int delId;
-                        std::cout << "Enter language ID to delete: ";
-                        std::cin >> delId;
-                        auto it = std::remove_if(ecosystemLanguages.begin(), ecosystemLanguages.end(), [delId](ProgrammingLanguage* p){ return p->getId() == delId; });
-                        if (it != ecosystemLanguages.end()) {
-                            ecosystemLanguages.erase(it, ecosystemLanguages.end());
-                            std::cout << "[Admin] Language ID " << delId << " prominently deleted from ecosystem." << std::endl;
+                        if (ecosystemLanguages.empty()) {
+                            std::cout << "[Admin] No languages available to delete." << std::endl;
                         } else {
-                            std::cout << "[Admin] Language ID not found." << std::endl;
+                            std::cout << "Select a language to delete:\n";
+                            for (size_t i = 0; i < ecosystemLanguages.size(); ++i) {
+                                std::cout << (i + 1) << ". " << ecosystemLanguages[i]->getName() << std::endl;
+                            }
+                            int sel;
+                            std::cout << "Choice: ";
+                            if (!(std::cin >> sel)) break;
+                            if (sel >= 1 && sel <= static_cast<int>(ecosystemLanguages.size())) {
+                                ProgrammingLanguage* target = ecosystemLanguages[sel - 1];
+                                std::cout << "[Admin] Language " << target->getName() << " prominently deleted from ecosystem." << std::endl;
+                                ecosystemLanguages.erase(ecosystemLanguages.begin() + (sel - 1));
+                            } else {
+                                std::cout << "Invalid selection!" << std::endl;
+                            }
                         }
                     }
                     else if (sub == 4) {
@@ -410,34 +425,68 @@ int main() {
                 std::cout << "Invalid credentials! Access Denied." << std::endl;
             }
         } else if (choice == 2) {
-            while (true) {
-                std::cout << "\n--- Developer Menu ---" << std::endl;
-                std::cout << "1. Perform Default Action\n2. Submit Language\n3. View Contributions\n4. Logout\nChoice: ";
-                int sub;
-                if (!(std::cin >> sub)) break;
-                if (sub == 1) dev.performAction();
-                else if (sub == 2) {
-                    std::string langName;
-                    std::cout << "Enter language name to submit: ";
-                    std::cin >> langName;
-                    bool exists = false;
-                    for (auto l : ecosystemLanguages) {
-                        if (l->getName() == langName) { exists = true; break; }
+            std::string inputUser, inputPass;
+            std::cout << "Enter Developer ID: ";
+            std::cin >> inputUser;
+            std::cout << "Enter Password: ";
+            std::cin >> inputPass;
+            
+            if (inputUser == dev.getProfile().name && dev.validatePassword(inputPass)) {
+                while (true) {
+                    std::cout << "\n--- Developer Menu ---" << std::endl;
+                    std::cout << "1. Perform Default Action\n2. Submit Language\n3. Update Language\n4. View Contributions\n5. Logout\nChoice: ";
+                    int sub;
+                    if (!(std::cin >> sub)) break;
+                    if (sub == 1) dev.performAction();
+                    else if (sub == 2) {
+                        std::string langName;
+                        std::cout << "Enter language name to submit: ";
+                        std::cin >> langName;
+                        bool exists = false;
+                        for (auto l : ecosystemLanguages) {
+                            if (l->getName() == langName) { exists = true; break; }
+                        }
+                        for (const auto& pending : pendingRequests) {
+                            if (pending.langName == langName && pending.type == "NEW") { exists = true; break; }
+                        }
+                        if (exists) {
+                            std::cout << "[Developer] Language '" << langName << "' already exists in the system or pending queue. Submission rejected." << std::endl;
+                        } else {
+                            pendingRequests.push_back(PendingRequest{"NEW", langName, "", nullptr});
+                            std::cout << "[Developer] Submitted language '" << langName << "' for Admin approval." << std::endl;
+                        }
                     }
-                    for (const auto& pending : pendingLanguages) {
-                        if (pending == langName) { exists = true; break; }
+                    else if (sub == 3) {
+                        if (ecosystemLanguages.empty()) {
+                            std::cout << "[Developer] No languages available to update." << std::endl;
+                        } else {
+                            std::cout << "Select a language to update:\n";
+                            for (size_t i = 0; i < ecosystemLanguages.size(); ++i) {
+                                std::cout << (i + 1) << ". " << ecosystemLanguages[i]->getName() << std::endl;
+                            }
+                            int sel;
+                            std::cout << "Choice: ";
+                            if (!(std::cin >> sel)) break;
+                            if (sel >= 1 && sel <= static_cast<int>(ecosystemLanguages.size())) {
+                                ProgrammingLanguage* target = ecosystemLanguages[sel - 1];
+                                std::string newVer;
+                                std::cout << "Enter newer version name: ";
+                                std::cin >> std::ws;
+                                std::getline(std::cin, newVer);
+                                pendingRequests.push_back(PendingRequest{"UPDATE", target->getName(), newVer, target});
+                                std::cout << "[Developer] Submitted update request for '" << target->getName() << "' to version " << newVer << " for Admin approval." << std::endl;
+                            } else {
+                                std::cout << "Invalid selection!" << std::endl;
+                            }
+                        }
                     }
-                    if (exists) {
-                        std::cout << "[Developer] Language '" << langName << "' already exists in the system or pending queue. Submission rejected." << std::endl;
-                    } else {
-                        pendingLanguages.push_back(langName);
-                        std::cout << "[Developer] Submitted language '" << langName << "' for Admin approval." << std::endl;
+                    else if (sub == 4) {
+                        std::cout << "Current Contributions Count: " << dev.getContributionCount() << std::endl;
                     }
+                    else if (sub == 5) { std::cout << "Logging out developer." << std::endl; break; }
                 }
-                else if (sub == 3) {
-                    std::cout << "Current Contributions Count: " << dev.getContributionCount() << std::endl;
-                }
-                else if (sub == 4) { std::cout << "Logging out developer." << std::endl; break; }
+            } else {
+                std::cout << "Invalid credentials! Access Denied." << std::endl;
             }
         } else if (choice == 3) {
             while (true) {
@@ -564,7 +613,11 @@ int main() {
                         if (!(std::cin >> sel)) break;
                         if (sel >= 1 && sel <= static_cast<int>(ecosystemLanguages.size())) {
                             ProgrammingLanguage* target = ecosystemLanguages[sel - 1];
-                            std::cout << "[Regular User] Average rating for " << target->getName() << " is: " << target->getAverageRating() << " stars." << std::endl;
+                            if (target->getRatings().empty()) {
+                                std::cout << "[Regular User] Average rating for " << target->getName() << " is: Unrated yet." << std::endl;
+                            } else {
+                                std::cout << "[Regular User] Average rating for " << target->getName() << " is: " << target->getAverageRating() << " stars." << std::endl;
+                            }
                         } else {
                             std::cout << "Invalid selection!" << std::endl;
                         }

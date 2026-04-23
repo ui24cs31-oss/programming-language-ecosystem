@@ -1,127 +1,123 @@
 #include <iostream>
-#include <vector>
-#include <string>
 using namespace std;
 
 // =====================================================
-// 🔹 STUBS (Lower-level modules replaced)
+// 🔹 STUB FUNCTIONS (LOW LEVEL)
 // =====================================================
 
-void voterMenu() {
-    cout << "[STUB] Voter Menu Called\n";
+void stubSearch() {
+    cout << "[STUB] Search Language Executed\n";
 }
 
-void candidateMenu() {
-    cout << "[STUB] Candidate Menu Called\n";
+void stubDownload() {
+    cout << "[STUB] Download Executed\n";
 }
 
-void adminMenu() {
-    cout << "[STUB] Admin Menu Called\n";
+void stubRate() {
+    cout << "[STUB] Rating Submitted\n";
 }
 
-void officerMenu() {
-    cout << "[STUB] Officer Menu Called\n";
+void stubFeedback() {
+    cout << "[STUB] Feedback Submitted\n";
 }
 
-void evmMenu() {
-    cout << "[STUB] EVM Menu Called\n";
-}
-
-// =====================================================
-// 🔹 AUTHENTICATION (Top-level logic)
-// =====================================================
-
-bool authenticate(string username, string password) {
-    vector<pair<string,string>> admins = {
-        {"parth","1234"},
-        {"prajyesh","5678"}
-    };
-
-    for(auto &a : admins) {
-        if(username == a.first && password == a.second)
-            return true;
-    }
-    return false;
+void stubAdminAction() {
+    cout << "[STUB] Admin Action Executed\n";
 }
 
 // =====================================================
-// 🔹 MAIN SYSTEM (TOP LEVEL MODULE)
+// 🔹 TOP LEVEL FLOWS (REAL)
 // =====================================================
 
-void mainSystem(int choice) {
+bool adminLogin(string user, string pass) {
+    return (user == "Aakash" && pass == "1234");
+}
+
+void adminFlow() {
+    cout << "\n--- Admin Flow ---\n";
+    stubAdminAction();
+}
+
+void developerFlow() {
+    cout << "\n--- Developer Flow ---\n";
+    cout << "[STUB] Submit Language\n";
+}
+
+void userFlow(int choice) {
+    cout << "\n--- User Flow ---\n";
+
     switch(choice) {
-        case 1: voterMenu(); break;
-        case 2: candidateMenu(); break;
-        case 3: adminMenu(); break;
-        case 4: officerMenu(); break;
-        case 5: evmMenu(); break;
-        default: cout << "Invalid Choice\n";
+        case 1: stubSearch(); break;
+        case 2: stubDownload(); break;
+        case 3: stubRate(); break;
+        case 4: stubFeedback(); break;
+        default: cout << "Invalid User Action\n";
     }
 }
 
 // =====================================================
-// 🔥 TESTS (Executes test cases)
+// 🔥 TEST DRIVER (TOP-DOWN)
 // =====================================================
 
 int main() {
 
-    int failed = 0;
-
     cout << "=========== TOP-DOWN TESTING ===========\n";
 
+    int failed = 0;
+
     // =================================================
-    // 🔹 TEST 1: Authentication Success
+    // TC1: Admin Login Success
     // =================================================
-    if(authenticate("parth","1234") != true) {
-        cout << "TC1 Failed: Valid login not working\n";
+    if (!adminLogin("Aakash","1234")) {
+        cout << "TC1 Failed\n";
         failed++;
     }
 
     // =================================================
-    // 🔹 TEST 2: Authentication Failure
+    // TC2: Admin Login Failure
     // =================================================
-    if(authenticate("wrong","wrong") != false) {
-        cout << "TC2 Failed: Invalid login accepted\n";
+    if (adminLogin("wrong","wrong")) {
+        cout << "TC2 Failed\n";
         failed++;
     }
 
     // =================================================
-    // 🔹 TEST 3: Menu → Voter Module
+    // TC3: Admin Flow Execution
     // =================================================
-    cout << "\n[TC3] Expect: Voter Stub\n";
-    mainSystem(1);
+    cout << "\n[TC3] Admin Flow\n";
+    adminFlow();
 
     // =================================================
-    // 🔹 TEST 4: Menu → Candidate Module
+    // TC4: Developer Flow
     // =================================================
-    cout << "\n[TC4] Expect: Candidate Stub\n";
-    mainSystem(2);
+    cout << "\n[TC4] Developer Flow\n";
+    developerFlow();
 
     // =================================================
-    // 🔹 TEST 5: Menu → Admin Module
+    // TC5: User Search
     // =================================================
-    cout << "\n[TC5] Expect: Admin Stub\n";
-    mainSystem(3);
+    cout << "\n[TC5] User Search\n";
+    userFlow(1);
 
     // =================================================
-    // 🔹 TEST 6: Menu → Officer Module
+    // TC6: User Download
     // =================================================
-    cout << "\n[TC6] Expect: Officer Stub\n";
-    mainSystem(4);
+    cout << "\n[TC6] User Download\n";
+    userFlow(2);
 
     // =================================================
-    // 🔹 TEST 7: Invalid Input
+    // TC7: Invalid User Input
     // =================================================
-    cout << "\n[TC7] Expect: Invalid Choice\n";
-    mainSystem(99);
+    cout << "\n[TC7] Invalid Input\n";
+    userFlow(99);
 
     // =================================================
-    // 🔹 FINAL RESULT
+    // RESULT
     // =================================================
-    if(failed == 0)
+    if (failed == 0)
         cout << "\n All Top-Down Tests Passed\n";
     else
-        cout << "\n Some Tests Failed: " << failed << endl;
+        cout << "\n Tests Failed: " << failed << endl;
 
     return 0;
 }
